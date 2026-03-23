@@ -1,0 +1,8 @@
+data/
+yolov8s.pt
+runs/
+__pycache__/
+*.pt
+*.npy
+*.mat
+*.zip
