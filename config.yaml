@@ -1,0 +1,85 @@
+# ─────────────────────────────────────────────
+#  Smart Depth Vision — Central Configuration
+# ─────────────────────────────────────────────
+
+# Paths
+paths:
+  raw_data:       "data/raw"
+  processed_data: "data/processed"
+  nyu_mat:        "data/raw/nyu_depth_v2_labeled.mat"
+  coco_images:    "data/raw/coco/val2017"
+  coco_ann:       "data/raw/coco/annotations/instances_val2017.json"
+  weights:        "models/weights"
+
+# Dataset
+dataset:
+  image_size:     224          # input size for classifier
+  depth_size:     224
+  num_classes:    10           # object categories (subset of NYU/COCO)
+  train_split:    0.70
+  val_split:      0.15
+  test_split:     0.15
+  min_crop_size:  48           # discard crops smaller than this (px)
+  max_samples_per_class: 800  # balance classes
+  depth_2d_noise: 0.01         # std of gaussian noise on synthetic flat depth
+
+  # COCO categories to use as 2D class (common objects)
+  coco_categories:
+    - person
+    - cat
+    - dog
+    - chair
+    - bottle
+    - cup
+    - laptop
+    - book
+    - cell phone
+    - backpack
+
+  # NYU label indices to use as 3D class (must match coco_categories order)
+  nyu_label_map:
+    person:     [7]
+    cat:        [85]
+    dog:        [82]
+    chair:      [19, 20]
+    bottle:     [50]
+    cup:        [22]
+    laptop:     [57]
+    book:       [6]
+    cell phone: []        # not in NYU — will be skipped
+    backpack:   []        # not in NYU — will be skipped
+
+# Models
+models:
+  yolo:
+    variant:    "yolov8s.pt"   # small = best speed/accuracy on RTX 3050
+    conf:       0.45
+    iou:        0.45
+    device:     "cuda"
+
+  midas:
+    variant:    "DPT_Hybrid"   # DPT_Large for max quality (needs ~1.8GB VRAM)
+    device:     "cuda"
+
+  classifier:
+    backbone:   "resnet18"
+    in_channels: 4             # RGB + Depth
+    pretrained: true
+    dropout:    0.3
+
+# Training
+training:
+  epochs:         40
+  batch_size:     32           # fits RTX 3050 4GB VRAM
+  learning_rate:  0.0003
+  weight_decay:   0.0001
+  scheduler:      "cosine"     # cosine annealing
+  warmup_epochs:  3
+  amp:            true         # automatic mixed precision (faster on RTX)
+  num_workers:    4
+  save_every:     5            # save checkpoint every N epochs
+  early_stop:     10           # stop if val loss doesn't improve for N epochs
+
+  # Loss weights (multi-task)
+  loss_binary_weight:   1.0
+  loss_category_weight: 0.5
