@@ -52,7 +52,7 @@ dataset:
 # Models
 models:
   yolo:
-    variant:    "yolov8s.pt"   # small = best speed/accuracy on RTX 3050
+    variant:    "yolov8l.pt"   # small = best speed/accuracy on RTX 3050
     conf:       0.45
     iou:        0.45
     device:     "cuda"
