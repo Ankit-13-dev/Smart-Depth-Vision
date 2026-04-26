@@ -1,8 +1,16 @@
-﻿data/
-yolov8s.pt
-runs/
-__pycache__/
+﻿# models
 *.pt
-*.npy
-*.mat
-*.zip
+*.pth
+*.onnx
+
+# datasets
+data/
+datasets/
+
+# cache
+__pycache__/
+*.pyc
+
+# env
+venv/
+.env
