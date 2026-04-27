@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Depth Vision — Spoof Detection</title>
+    <style>
+         :root {
+            --bg: #0a0e1a;
+            --surface: #111827;
+            --surface2: #1a2235;
+            --border: #2a3550;
+            --accent: #3b82f6;
+            --accent2: #06b6d4;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text: #e2e8f0;
+            --muted: #64748b;
+            --font: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .app {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        .navbar {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .brand {
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .nav-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .main {
+            flex: 1;
+            padding: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--accent2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+        
+        input[type="text"],
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color .2s;
+        }
+        
+        input:focus {
+            border-color: var(--accent);
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all .2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: #fff;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            color: #fff;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+        
+        .btn-ghost:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-sm {
+            padding: 6px 14px;
+            font-size: 0.8rem;
+        }
+        
+        .cam-wrapper {
+            position: relative;
+            display: inline-block;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            width: 100%;
+            max-width: 560px;
+        }
+        
+        .cam-wrapper video,
+        .cam-wrapper canvas {
+            display: block;
+            width: 100%;
+            border-radius: 10px;
+        }
+        
+        .verdict-banner {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1rem;
+            text-align: center;
+            backdrop-filter: blur(6px);
+            transition: all .3s;
+        }
+        
+        .verdict-real {
+            background: rgba(16, 185, 129, .85);
+            color: #fff;
+        }
+        
+        .verdict-spoof {
+            background: rgba(239, 68, 68, .85);
+            color: #fff;
+        }
+        
+        .verdict-loading {
+            background: rgba(30, 41, 59, .85);
+            color: var(--muted);
+        }
+        
+        #detection-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+        }
+        
+        .metric {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+        
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+        
+        .metric.good .metric-value {
+            color: var(--success);
+        }
+        
+        .metric.bad .metric-value {
+            color: var(--danger);
+        }
+        
+        .metric.neutral .metric-value {
+            color: var(--accent2);
+        }
+        
+        .depth-img {
+            width: 100%;
+            max-width: 240px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 99px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .badge-green {
+            background: rgba(16, 185, 129, .15);
+            color: var(--success);
+        }
+        
+        .badge-red {
+            background: rgba(239, 68, 68, .15);
+            color: var(--danger);
+        }
+        
+        .badge-blue {
+            background: rgba(59, 130, 246, .15);
+            color: var(--accent);
+        }
+        
+        .badge-yellow {
+            background: rgba(245, 158, 11, .15);
+            color: var(--warning);
+        }
+        
+        .photo-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        
+        .photo-grid img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid var(--border);
+            cursor: pointer;
+        }
+        
+        .photo-grid img.selected {
+            border-color: var(--success);
+        }
+        
+        .progress-bar {
+            height: 6px;
+            background: var(--surface2);
+            border-radius: 99px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            border-radius: 99px;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            transition: width .4s;
+        }
+        
+        .table-wrap {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        
+        thead tr {
+            background: var(--surface2);
+        }
+        
+        th,
+        td {
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        th {
+            color: var(--muted);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+        
+        tr:hover td {
+            background: rgba(255, 255, 255, .02);
+        }
+        
+        #toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .toast {
+            padding: 12px 18px;
+            border-radius: 10px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            backdrop-filter: blur(8px);
+            animation: slideIn .3s ease;
+            max-width: 320px;
+        }
+        
+        .toast-success {
+            background: rgba(16, 185, 129, .9);
+            color: #fff;
+        }
+        
+        .toast-error {
+            background: rgba(239, 68, 68, .9);
+            color: #fff;
+        }
+        
+        .toast-info {
+            background: rgba(59, 130, 246, .9);
+            color: #fff;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(60px);
+                opacity: 0;
+            }
+            to {
+                transform: none;
+                opacity: 1;
+            }
+        }
+        
+        .auth-center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: calc(100vh - 64px);
+            padding: 20px;
+        }
+        
+        .auth-card {
+            max-width: 440px;
+            width: 100%;
+        }
+        
+        .tab-switcher {
+            display: flex;
+            margin-bottom: 24px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: var(--surface2);
+            border: none;
+            color: var(--muted);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: .9rem;
+            transition: .2s;
+        }
+        
+        .tab-btn.active {
+            background: var(--accent);
+            color: #fff;
+        }
+        
+        @media (min-width: 900px) {
+            .two-col {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }
+        }
+        
+        .step-indicator {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            align-items: center;
+        }
+        
+        .step-dot {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--surface2);
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .75rem;
+            font-weight: 700;
+            color: var(--muted);
+            transition: .3s;
+        }
+        
+        .step-dot.active {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        .step-dot.done {
+            background: var(--success);
+            border-color: var(--success);
+            color: #fff;
+        }
+        
+        .step-line {
+            flex: 1;
+            height: 2px;
+            background: var(--border);
+            border-radius: 99px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+
+        <!-- Navbar -->
+        <nav class="navbar">
+            <div class="brand">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+            </svg> Smart Depth Vision
+            </div>
+            <div class="nav-actions" id="nav-actions"></div>
+        </nav>
+
+        <!-- ── AUTH PAGE ── -->
+        <div id="page-auth" class="page active">
+            <div class="auth-center">
+                <div class="auth-card">
+                    <div class="tab-switcher">
+                        <button class="tab-btn active" id="tab-login-btn" onclick="showAuthTab('login')">Login</button>
+                        <button class="tab-btn" id="tab-register-btn" onclick="showAuthTab('register')">Register</button>
+                    </div>
+
+                    <div id="auth-login" class="card">
+                        <div class="card-title">Login</div>
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input type="text" id="login-username" placeholder="your_username" autocomplete="username" />
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="login-password" placeholder="Enter password" autocomplete="current-password" />
+                        </div>
+                        <button class="btn btn-primary" style="width:100%" id="login-btn" onclick="doLogin()">
+                        Login
+                    </button>
+                        <p style="margin-top:14px; font-size:.82rem; color:var(--muted); text-align:center">
+                            Don't have an account?
+                            <a href="#" onclick="showAuthTab('register'); return false;" style="color:var(--accent)">Register</a>
+                        </p>
+                    </div>
+
+                    <div id="auth-register" class="card" style="display:none">
+                        <div class="card-title">Create Account</div>
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input type="text" id="reg-username" placeholder="choose_a_username" />
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="reg-email" placeholder="you@email.com" />
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="reg-password" placeholder="min 6 characters" />
+                        </div>
+                        <button class="btn btn-primary" style="width:100%" id="register-btn" onclick="doRegister()">
+                        Create Account
+                    </button>
+                        <p style="margin-top:14px; font-size:.82rem; color:var(--muted); text-align:center">
+                            Already have an account?
+                            <a href="#" onclick="showAuthTab('login'); return false;" style="color:var(--accent)">Login</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── ENROLL PAGE ── -->
+        <div id="page-enroll" class="page">
+            <div class="main">
+                <h2 style="margin-bottom:8px">Face Enrollment</h2>
+                <p style="color:var(--muted); margin-bottom:20px; font-size:.9rem">
+                    Capture 3-4 photos of your face from different angles. These will be used to verify your identity.
+                </p>
+
+                <div class="step-indicator">
+                    <div class="step-dot active" id="step1">1</div>
+                    <div class="step-line"></div>
+                    <div class="step-dot" id="step2">2</div>
+                    <div class="step-line"></div>
+                    <div class="step-dot" id="step3">3</div>
+                    <div class="step-line"></div>
+                    <div class="step-dot" id="step4">4</div>
+                </div>
+                <p style="font-size:.82rem; color:var(--muted); margin-bottom:20px">
+                    Captures so far: <strong id="capture-count">0 / 4</strong>
+                </p>
+
+                <div class="two-col">
+                    <div>
+                        <div class="card">
+                            <div class="card-title">Camera</div>
+                            <div class="cam-wrapper" style="max-width:100%">
+                                <video id="enroll-video" autoplay playsinline muted></video>
+                            </div>
+                            <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap">
+                                <button class="btn btn-primary" id="capture-btn" onclick="captureEnrollPhoto()">
+                                Capture Photo
+                            </button>
+                                <button class="btn btn-ghost btn-sm" onclick="resetCaptures()">Reset</button>
+                            </div>
+                            <p style="font-size:.8rem; color:var(--muted); margin-top:10px">
+                                Tip: Capture front, left, right, and slight tilt for best accuracy.
+                            </p>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="card">
+                            <div class="card-title">Captured Photos</div>
+                            <div class="photo-grid" id="captured-photos"></div>
+                            <div style="margin-top:18px">
+                                <button class="btn btn-success" id="enroll-submit-btn" onclick="submitEnrollment()" disabled>
+                                Save Face and Continue
+                            </button>
+                            </div>
+                        </div>
+                        <div class="card" style="margin-top:0">
+                            <div class="card-title">Instructions</div>
+                            <ul style="font-size:.85rem; color:var(--muted); line-height:1.8; padding-left:18px">
+                                <li>Face the camera directly for photo 1</li>
+                                <li>Turn slightly left for photo 2</li>
+                                <li>Turn slightly right for photo 3</li>
+                                <li>Tilt your head slightly for photo 4</li>
+                                <li>Good lighting is essential</li>
+                                <li>Remove sunglasses/hats</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── VERIFY PAGE ── -->
+        <div id="page-verify" class="page">
+            <div class="main">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px">
+                    <div>
+                        <h2 style="margin-bottom:4px">Spoof Detection and Verification</h2>
+                        <p style="color:var(--muted); font-size:.9rem">Real-time anti-spoofing using YOLOv8 + MiDaS + CLIP</p>
+                    </div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap">
+                        <button class="btn btn-ghost btn-sm" onclick="toggleCamera()">Pause / Resume</button>
+                        <button class="btn btn-primary btn-sm" onclick="runVerification()">Full Verify</button>
+                    </div>
+                </div>
+
+                <div class="two-col">
+                    <div>
+                        <div class="card">
+                            <div class="card-title">Live Feed</div>
+                            <div class="cam-wrapper" id="verify-cam-wrap" style="max-width:100%">
+                                <video id="verify-video" autoplay playsinline muted></video>
+                                <canvas id="detection-canvas"></canvas>
+                                <div class="verdict-banner verdict-loading" id="verdict-banner">
+                                    Initializing camera...
+                                </div>
+                            </div>
+                            <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap">
+                                <button class="btn btn-success btn-sm" onclick="startLiveAnalysis()" id="live-btn">
+                                Start Live Analysis
+                            </button>
+                                <button class="btn btn-ghost btn-sm" onclick="stopLiveAnalysis()" id="stop-btn" style="display:none">
+                                Stop
+                            </button>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-title">Depth Map (MiDaS)</div>
+                            <img id="depth-img" class="depth-img" alt="depth map will appear here" style="opacity:.3" />
+                            <p style="font-size:.78rem; color:var(--muted); margin-top:8px">
+                                Plasma colormap: warm = near, cool = far. Real faces show depth variation.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="card">
+                            <div class="card-title">Live Spoof Scores</div>
+                            <div class="metrics" id="metrics-grid">
+                                <div class="metric neutral">
+                                    <div class="metric-value" id="m-depth">--</div>
+                                    <div class="metric-label">Depth Score</div>
+                                </div>
+                                <div class="metric neutral">
+                                    <div class="metric-value" id="m-clip">--</div>
+                                    <div class="metric-label">CLIP Score</div>
+                                </div>
+                                <div class="metric neutral">
+                                    <div class="metric-value" id="m-yolo">--</div>
+                                    <div class="metric-label">Person Conf</div>
+                                </div>
+                                <div class="metric neutral">
+                                    <div class="metric-value" id="m-combined">--</div>
+                                    <div class="metric-label">Combined</div>
+                                </div>
+                            </div>
+                            <div style="margin-top:14px; display:grid; gap:8px">
+                                <div>
+                                    <div style="display:flex; justify-content:space-between; font-size:.8rem; margin-bottom:2px">
+                                        <span style="color:var(--muted)">Depth (MiDaS)</span>
+                                        <span id="bar-depth-label">--</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" id="bar-depth" style="width:0%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div style="display:flex; justify-content:space-between; font-size:.8rem; margin-bottom:2px">
+                                        <span style="color:var(--muted)">CLIP</span>
+                                        <span id="bar-clip-label">--</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" id="bar-clip" style="width:0%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div style="display:flex; justify-content:space-between; font-size:.8rem; margin-bottom:2px">
+                                        <span style="color:var(--muted)">YOLOv8</span>
+                                        <span id="bar-yolo-label">--</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" id="bar-yolo" style="width:0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card" id="verify-result-card" style="display:none">
+                            <div class="card-title">Verification Result</div>
+                            <div id="verify-result-body"></div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-title">YOLOv8 Detections</div>
+                            <div id="detections-list" style="font-size:.85rem; color:var(--muted)">
+                                No detections yet.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── LOGS PAGE ── -->
+        <div id="page-logs" class="page">
+            <div class="main">
+                <h2 style="margin-bottom:20px">Verification Logs</h2>
+                <div class="card">
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Timestamp</th>
+                                    <th>Depth</th>
+                                    <th>CLIP</th>
+                                    <th>Score</th>
+                                    <th>Spoof?</th>
+                                    <th>Face Match</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logs-tbody">
+                                <tr>
+                                    <td colspan="7" style="text-align:center; padding:30px; color:var(--muted)">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-ghost btn-sm" style="margin-top:14px" onclick="loadLogs()">Refresh</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <!-- end .app -->
+
+    <div id="toast-container"></div>
+
+    <script>
+        // ═══════════════════════════════════════════════════════
+        //  STATE  (no const/let — using var for max compatibility)
+        // ═══════════════════════════════════════════════════════
+        var API = window.location.origin;
+        var authToken = localStorage.getItem('sdv_token');
+        var currentUser = null;
+        var enrollCaptures = [];
+        var cameraStream = null;
+        var liveAnalysisTimer = null;
+        var cameraPaused = false;
+        var ANALYSIS_INTERVAL_MS = 700;
+
+        // ═══════════════════════════════════════════════════════
+        //  INIT
+        // ═══════════════════════════════════════════════════════
+        async function init() {
+            if (!authToken) {
+                showPage('auth');
+                return;
+            }
+            try {
+                var resp = await apiFetch('/api/me');
+                currentUser = resp;
+                renderNav();
+                if (!currentUser.face_enrolled) {
+                    showPage('enroll');
+                    await startCamera('enroll-video');
+                } else {
+                    showPage('verify');
+                    await startCamera('verify-video');
+                }
+            } catch (e) {
+                authToken = null;
+                localStorage.removeItem('sdv_token');
+                showPage('auth');
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  NAVIGATION
+        // ═══════════════════════════════════════════════════════
+        function showPage(name) {
+            var pages = document.querySelectorAll('.page');
+            for (var i = 0; i < pages.length; i++) {
+                pages[i].classList.remove('active');
+            }
+            document.getElementById('page-' + name).classList.add('active');
+            if (name === 'logs') loadLogs();
+        }
+
+        function renderNav() {
+            var el = document.getElementById('nav-actions');
+            if (!currentUser) {
+                el.innerHTML = '<span style="font-size:.85rem; color:var(--muted)">Not logged in</span>';
+                return;
+            }
+            var enrolled = currentUser.face_enrolled;
+            el.innerHTML =
+                '<span style="font-size:.85rem; color:var(--muted)">' +
+                currentUser.username +
+                ' <span class="badge ' + (enrolled ? 'badge-green' : 'badge-yellow') + '">' +
+                (enrolled ? 'Enrolled' : 'Not Enrolled') +
+                '</span>' +
+                '</span>' +
+                '<button class="btn btn-ghost btn-sm" onclick="showPage(\'verify\')">Verify</button>' +
+                '<button class="btn btn-ghost btn-sm" onclick="showPage(\'enroll\')">Re-Enroll</button>' +
+                '<button class="btn btn-ghost btn-sm" onclick="showPage(\'logs\')">Logs</button>' +
+                '<button class="btn btn-danger btn-sm" onclick="logout()">Logout</button>';
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  AUTH
+        //  FIX 1: showAuthTab no longer relies on implicit `event`
+        // ═══════════════════════════════════════════════════════
+        function showAuthTab(tab) {
+            var allBtns = document.querySelectorAll('.tab-btn');
+            for (var i = 0; i < allBtns.length; i++) {
+                allBtns[i].classList.remove('active');
+            }
+            var activeTabBtn = document.getElementById('tab-' + tab + '-btn');
+            if (activeTabBtn) activeTabBtn.classList.add('active');
+
+            document.getElementById('auth-login').style.display = (tab === 'login') ? 'block' : 'none';
+            document.getElementById('auth-register').style.display = (tab === 'register') ? 'block' : 'none';
+        }
+
+        async function doLogin() {
+            var username = document.getElementById('login-username').value.trim();
+            var password = document.getElementById('login-password').value;
+            if (!username || !password) {
+                toast('Please fill all fields', 'error');
+                return;
+            }
+
+            var btn = document.getElementById('login-btn');
+            btn.disabled = true;
+            btn.textContent = 'Logging in...';
+
+            try {
+                var data = await apiPost('/api/login', {
+                    username: username,
+                    password: password
+                });
+                authToken = data.access_token;
+                localStorage.setItem('sdv_token', authToken);
+                currentUser = data;
+                renderNav();
+                toast('Welcome back, ' + username + '!', 'success');
+
+                if (!data.face_enrolled) {
+                    showPage('enroll');
+                    await startCamera('enroll-video');
+                } else {
+                    showPage('verify');
+                    await startCamera('verify-video');
+                }
+            } catch (e) {
+                toast(e.message || 'Login failed', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Login';
+            }
+        }
+
+        async function doRegister() {
+            var username = document.getElementById('reg-username').value.trim();
+            var email = document.getElementById('reg-email').value.trim();
+            var password = document.getElementById('reg-password').value;
+
+            if (!username || !email || !password) {
+                toast('Please fill all fields', 'error');
+                return;
+            }
+            if (password.length < 6) {
+                toast('Password must be at least 6 characters', 'error');
+                return;
+            }
+
+            var btn = document.getElementById('register-btn');
+            btn.disabled = true;
+            btn.textContent = 'Creating account...';
+
+            try {
+                var data = await apiPost('/api/register', {
+                    username: username,
+                    email: email,
+                    password: password
+                });
+                authToken = data.access_token;
+                localStorage.setItem('sdv_token', authToken);
+                currentUser = data;
+                currentUser.email = email;
+                renderNav();
+                toast('Account created! Now enroll your face.', 'success');
+                showPage('enroll');
+                await startCamera('enroll-video');
+            } catch (e) {
+                toast(e.message || 'Registration failed', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Create Account';
+            }
+        }
+
+        function logout() {
+            authToken = null;
+            currentUser = null;
+            localStorage.removeItem('sdv_token');
+            stopCamera();
+            stopLiveAnalysis();
+            renderNav();
+            showPage('auth');
+            toast('Logged out', 'info');
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  CAMERA
+        // ═══════════════════════════════════════════════════════
+        async function startCamera(videoId) {
+            stopCamera();
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: {
+                            ideal: 640
+                        },
+                        height: {
+                            ideal: 480
+                        },
+                        facingMode: 'user'
+                    },
+                    audio: false
+                });
+                var vid = document.getElementById(videoId);
+                if (vid) vid.srcObject = cameraStream;
+            } catch (e) {
+                toast('Camera access denied: ' + e.message, 'error');
+            }
+        }
+
+        function stopCamera() {
+            if (cameraStream) {
+                var tracks = cameraStream.getTracks();
+                for (var i = 0; i < tracks.length; i++) {
+                    tracks[i].stop();
+                }
+                cameraStream = null;
+            }
+        }
+
+        function toggleCamera() {
+            cameraPaused = !cameraPaused;
+            var vid = document.getElementById('verify-video');
+            if (vid) {
+                if (cameraPaused) {
+                    vid.pause();
+                } else {
+                    vid.play();
+                }
+            }
+            toast(cameraPaused ? 'Camera paused' : 'Camera resumed', 'info');
+        }
+
+        function captureFrame(videoId) {
+            var vid = document.getElementById(videoId);
+            if (!vid || !vid.srcObject) return null;
+            var canvas = document.createElement('canvas');
+            canvas.width = vid.videoWidth || 640;
+            canvas.height = vid.videoHeight || 480;
+            canvas.getContext('2d').drawImage(vid, 0, 0);
+            return canvas.toDataURL('image/jpeg', 0.85);
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  ENROLLMENT
+        // ═══════════════════════════════════════════════════════
+        function captureEnrollPhoto() {
+            if (enrollCaptures.length >= 4) {
+                toast('Maximum 4 photos reached. Submit or reset.', 'info');
+                return;
+            }
+            var b64 = captureFrame('enroll-video');
+            if (!b64) {
+                toast('Camera not ready', 'error');
+                return;
+            }
+            enrollCaptures.push(b64);
+            renderCapturedPhotos();
+            updateStepIndicator();
+            toast('Photo ' + enrollCaptures.length + ' captured!', 'success');
+        }
+
+        function renderCapturedPhotos() {
+            var grid = document.getElementById('captured-photos');
+            var count = document.getElementById('capture-count');
+            count.textContent = enrollCaptures.length + ' / 4';
+            var html = '';
+            for (var i = 0; i < enrollCaptures.length; i++) {
+                html += '<img src="' + enrollCaptures[i] + '" title="Photo ' + (i + 1) +
+                    '" onclick="removeCapture(' + i + ')"/>';
+            }
+            grid.innerHTML = html;
+            document.getElementById('enroll-submit-btn').disabled = (enrollCaptures.length < 2);
+        }
+
+        function removeCapture(i) {
+            enrollCaptures.splice(i, 1);
+            renderCapturedPhotos();
+            updateStepIndicator();
+        }
+
+        function resetCaptures() {
+            enrollCaptures = [];
+            renderCapturedPhotos();
+            updateStepIndicator();
+        }
+
+        function updateStepIndicator() {
+            for (var i = 1; i <= 4; i++) {
+                var el = document.getElementById('step' + i);
+                if (!el) continue;
+                el.classList.remove('active', 'done');
+                if (i <= enrollCaptures.length) {
+                    el.classList.add('done');
+                } else if (i === enrollCaptures.length + 1) {
+                    el.classList.add('active');
+                }
+            }
+        }
+
+        async function submitEnrollment() {
+            if (enrollCaptures.length < 2) {
+                toast('Capture at least 2 photos', 'error');
+                return;
+            }
+            var btn = document.getElementById('enroll-submit-btn');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+            try {
+                var data = await apiFetch('/api/enroll-face-b64', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        images: enrollCaptures
+                    })
+                });
+                toast(data.message, 'success');
+                currentUser.face_enrolled = true;
+                currentUser.face_count = data.total_embeddings;
+                renderNav();
+                enrollCaptures = [];
+                setTimeout(async function() {
+                    showPage('verify');
+                    await startCamera('verify-video');
+                }, 800);
+            } catch (e) {
+                toast('Enrollment failed: ' + (e.message || 'Unknown error'), 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Save Face and Continue';
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  LIVE ANALYSIS
+        // ═══════════════════════════════════════════════════════
+        function startLiveAnalysis() {
+            if (liveAnalysisTimer) return;
+            document.getElementById('live-btn').style.display = 'none';
+            document.getElementById('stop-btn').style.display = '';
+            setVerdict('loading', 'Starting analysis...');
+            liveAnalysisTimer = setInterval(doLiveAnalysis, ANALYSIS_INTERVAL_MS);
+        }
+
+        function stopLiveAnalysis() {
+            if (liveAnalysisTimer) {
+                clearInterval(liveAnalysisTimer);
+                liveAnalysisTimer = null;
+            }
+            document.getElementById('live-btn').style.display = '';
+            document.getElementById('stop-btn').style.display = 'none';
+            setVerdict('loading', 'Analysis stopped');
+        }
+
+        async function doLiveAnalysis() {
+            if (cameraPaused) return;
+            var frame = captureFrame('verify-video');
+            if (!frame) return;
+            try {
+                var data = await apiFetch('/api/analyze-frame', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        frame: frame
+                    })
+                });
+                updateSpoofUI(data);
+            } catch (e) { /* silent fail during live polling */ }
+        }
+
+        // FIX 2: all ?? replaced with explicit null/undefined checks
+        function updateSpoofUI(data) {
+            var r = data.spoof_result || {};
+            var ds = (r.depth_score !== undefined && r.depth_score !== null) ? r.depth_score : 0;
+            var cs = (r.clip_score !== undefined && r.clip_score !== null) ? r.clip_score : 0;
+            var ys = (r.yolo_score !== undefined && r.yolo_score !== null) ? r.yolo_score : 0;
+            var combined = (r.combined_score !== undefined && r.combined_score !== null) ? r.combined_score : 0;
+
+            setMetric('m-depth', Math.round(ds * 100) + '%', ds > 0.5 ? 'good' : 'bad');
+            setMetric('m-clip', Math.round(cs * 100) + '%', cs > 0.5 ? 'good' : 'bad');
+            setMetric('m-yolo', Math.round(ys * 100) + '%', ys > 0.4 ? 'good' : 'bad');
+            setMetric('m-combined', Math.round(combined * 100) + '%', combined > 0.5 ? 'good' : 'bad');
+
+            setBar('depth', ds);
+            setBar('clip', cs);
+            setBar('yolo', ys);
+
+            if (data.depth_img) {
+                var dImg = document.getElementById('depth-img');
+                dImg.src = data.depth_img;
+                dImg.style.opacity = '1';
+            }
+
+            var dv = r.depth_verdict || '';
+            var cv = r.clip_verdict || '';
+            if (r.is_real) {
+                setVerdict('real', 'REAL - ' + dv + ' | CLIP: ' + cv);
+            } else {
+                setVerdict('spoof', 'SPOOF DETECTED - ' + dv + ' | CLIP: ' + cv);
+            }
+
+            drawDetections(data.yolo_detections || []);
+
+            var dl = document.getElementById('detections-list');
+            var dets = data.yolo_detections || [];
+            if (dets.length === 0) {
+                dl.textContent = 'No objects detected.';
+            } else {
+                var html = '';
+                for (var i = 0; i < dets.length; i++) {
+                    html +=
+                        '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">' +
+                        '<span><strong>' + dets[i].label + '</strong></span>' +
+                        '<span class="badge badge-blue">' + dets[i].confidence + '%</span>' +
+                        '</div>';
+                }
+                dl.innerHTML = html;
+            }
+        }
+
+        function setVerdict(type, text) {
+            var el = document.getElementById('verdict-banner');
+            el.className = 'verdict-banner verdict-' + type;
+            el.textContent = text;
+        }
+
+        function setMetric(id, val, cls) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = val;
+            el.closest('.metric').className = 'metric ' + cls;
+        }
+
+        function setBar(name, val) {
+            var fill = document.getElementById('bar-' + name);
+            var label = document.getElementById('bar-' + name + '-label');
+            if (fill) fill.style.width = Math.round(val * 100) + '%';
+            if (label) label.textContent = Math.round(val * 100) + '%';
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  CANVAS DETECTION DRAWING
+        // ═══════════════════════════════════════════════════════
+        function drawDetections(detections) {
+            var vid = document.getElementById('verify-video');
+            var canvas = document.getElementById('detection-canvas');
+            if (!canvas || !vid) return;
+            canvas.width = vid.clientWidth;
+            canvas.height = vid.clientHeight;
+            var ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (var i = 0; i < detections.length; i++) {
+                var d = detections[i];
+                var x = d.x0 * canvas.width;
+                var y = d.y0 * canvas.height;
+                var bw = (d.x1 - d.x0) * canvas.width;
+                var bh = (d.y1 - d.y0) * canvas.height;
+                var col = (d.label === 'person') ? '#10b981' : '#3b82f6';
+
+                ctx.strokeStyle = col;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, bw, bh);
+
+                ctx.fillStyle = col;
+                ctx.font = 'bold 12px Inter, sans-serif';
+                var labelText = d.label + ' ' + d.confidence + '%';
+                var tw = ctx.measureText(labelText).width + 8;
+                ctx.fillRect(x, y - 20, tw, 20);
+                ctx.fillStyle = '#fff';
+                ctx.fillText(labelText, x + 4, y - 5);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  FULL VERIFICATION
+        //  FIX 3: replaced currentUser?.username with safe check
+        //  FIX 4: replaced data.spoof_details?.x with safe check
+        // ═══════════════════════════════════════════════════════
+        async function runVerification() {
+            var frame = captureFrame('verify-video');
+            if (!frame) {
+                toast('Camera not ready', 'error');
+                return;
+            }
+
+            toast('Running full verification...', 'info');
+            try {
+                var uname = (currentUser && currentUser.username) ? currentUser.username : null;
+
+                var data = await apiFetch('/api/verify', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        frame: frame,
+                        username: uname
+                    })
+                });
+
+                var card = document.getElementById('verify-result-card');
+                var body = document.getElementById('verify-result-body');
+                card.style.display = 'block';
+
+                var access = data.access_granted;
+                var isReal = data.is_real;
+                var matched = data.face_matched;
+
+                var spoofDetails = (data.spoof_details !== undefined && data.spoof_details !== null) ? data.spoof_details : {};
+                var clipVerdict = (spoofDetails.clip_verdict !== undefined && spoofDetails.clip_verdict !== null) ? spoofDetails.clip_verdict : '--';
+                var combinedScore = (spoofDetails.combined_score !== undefined && spoofDetails.combined_score !== null) ? spoofDetails.combined_score : 0;
+
+                var statusText = access ? 'ACCESS GRANTED' : (isReal ? 'REAL - NO FACE MATCH' : 'ACCESS DENIED - SPOOF');
+                var statusColor = access ? 'var(--success)' : 'var(--danger)';
+
+                var matchedHtml = '';
+                if (data.matched_user) {
+                    matchedHtml = '<div style="color:var(--muted);font-size:.9rem">Identity: <strong style="color:var(--text)">' +
+                        data.matched_user + '</strong></div>';
+                }
+
+                body.innerHTML =
+                    '<div style="text-align:center;padding:16px 0">' +
+                    '<div style="font-size:3rem">' + (access ? '&#9989;' : (isReal ? '&#9888;' : '&#128680;')) + '</div>' +
+                    '<div style="font-size:1.3rem;font-weight:700;margin:8px 0;color:' + statusColor + '">' + statusText + '</div>' +
+                    matchedHtml +
+                    '</div>' +
+                    '<div class="metrics" style="margin-top:14px">' +
+                    '<div class="metric ' + (isReal ? 'good' : 'bad') + '">' +
+                    '<div class="metric-value">' + (isReal ? '3D' : '2D') + '</div>' +
+                    '<div class="metric-label">Depth</div>' +
+                    '</div>' +
+                    '<div class="metric ' + (clipVerdict === 'real' ? 'good' : 'bad') + '">' +
+                    '<div class="metric-value">' + clipVerdict + '</div>' +
+                    '<div class="metric-label">CLIP</div>' +
+                    '</div>' +
+                    '<div class="metric ' + (matched ? 'good' : 'bad') + '">' +
+                    '<div class="metric-value">' + (matched ? 'YES' : 'NO') + '</div>' +
+                    '<div class="metric-label">Face Match</div>' +
+                    '</div>' +
+                    '<div class="metric neutral">' +
+                    '<div class="metric-value">' + Math.round(combinedScore * 100) + '%</div>' +
+                    '<div class="metric-label">Score</div>' +
+                    '</div>' +
+                    '</div>';
+
+                toast(access ? 'Access Granted!' : 'Access Denied', access ? 'success' : 'error');
+            } catch (e) {
+                toast('Verification error: ' + e.message, 'error');
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  LOGS
+        // ═══════════════════════════════════════════════════════
+        async function loadLogs() {
+            var tbody = document.getElementById('logs-tbody');
+            try {
+                var logs = await apiFetch('/api/logs?limit=30');
+                if (!logs.length) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted)">No logs yet</td></tr>';
+                    return;
+                }
+                var html = '';
+                for (var i = 0; i < logs.length; i++) {
+                    var l = logs[i];
+                    var depthClass = (l.depth_verdict === '3D') ? 'badge-green' : 'badge-red';
+                    var clipClass = (l.clip_verdict === 'real') ? 'badge-green' : 'badge-red';
+                    var spoofClass = l.is_spoof ? 'badge-red' : 'badge-green';
+                    var matchClass = l.face_matched ? 'badge-green' : 'badge-yellow';
+                    var matchVal = (l.face_matched === null || l.face_matched === undefined) ? '--' : (l.face_matched ? 'Matched' : 'No match');
+                    var scoreVal = l.combined_score ? (Math.round(l.combined_score * 100) + '%') : '--';
+
+                    html +=
+                        '<tr>' +
+                        '<td>' + l.id + '</td>' +
+                        '<td style="font-size:.8rem">' + new Date(l.timestamp).toLocaleString() + '</td>' +
+                        '<td><span class="badge ' + depthClass + '">' + (l.depth_verdict || '--') + '</span></td>' +
+                        '<td><span class="badge ' + clipClass + '">' + (l.clip_verdict || '--') + '</span></td>' +
+                        '<td>' + scoreVal + '</td>' +
+                        '<td><span class="badge ' + spoofClass + '">' + (l.is_spoof ? 'SPOOF' : 'REAL') + '</span></td>' +
+                        '<td><span class="badge ' + matchClass + '">' + matchVal + '</span></td>' +
+                        '</tr>';
+                }
+                tbody.innerHTML = html;
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--danger)">' + e.message + '</td></tr>';
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  API HELPERS
+        // ═══════════════════════════════════════════════════════
+        async function apiFetch(path, options) {
+            if (!options) options = {};
+            var headers = {
+                'Content-Type': 'application/json'
+            };
+            if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
+
+            var resp = await fetch(API + path, {
+                method: options.method || 'GET',
+                body: options.body || undefined,
+                headers: headers
+            });
+            var data = await resp.json();
+            if (!resp.ok) throw new Error(data.detail || ('HTTP ' + resp.status));
+            return data;
+        }
+
+        async function apiPost(path, body) {
+            return apiFetch(path, {
+                method: 'POST',
+                body: JSON.stringify(body)
+            });
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  TOAST
+        // ═══════════════════════════════════════════════════════
+        function toast(msg, type) {
+            if (!type) type = 'info';
+            var el = document.createElement('div');
+            el.className = 'toast toast-' + type;
+            el.textContent = msg;
+            document.getElementById('toast-container').appendChild(el);
+            setTimeout(function() {
+                if (el.parentNode) el.parentNode.removeChild(el);
+            }, 4000);
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  BOOT
+        // ═══════════════════════════════════════════════════════
+        window.addEventListener('DOMContentLoaded', init);
+        window.addEventListener('beforeunload', function() {
+            stopCamera();
+            stopLiveAnalysis();
+        });
+    </script>
+</body>
+
+</html>

@@ -1,14 +1,40 @@
-# Existing dependencies (keep them)
-opencv-python
-numpy
-torch
-torchvision
-ultralytics
-timm
+# Smart Depth Vision — requirements.txt
+# Install with: pip install -r requirements.txt
 
-# New for CLIP integration
-ftfy
-regex
-tqdm
-git+https://github.com/openai/CLIP.git
-Pillow
+# ── Web Framework ────────────────────────────────────────
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+python-multipart==0.0.9         # for UploadFile support
+
+# ── Auth & Security ──────────────────────────────────────
+python-jose[cryptography]==3.3.0  # JWT
+passlib[bcrypt]==1.7.4            # password hashing
+
+# ── Database ─────────────────────────────────────────────
+sqlalchemy==2.0.30
+
+# ── Computer Vision & ML ─────────────────────────────────
+torch>=2.1.0                     # or torch==2.1.0+cu118 for CUDA
+torchvision>=0.16.0
+ultralytics==8.2.0               # YOLOv8
+timm==0.9.16                     # required by MiDaS DPT models
+opencv-python-headless==4.9.0.80  # headless for server deployments
+Pillow==10.3.0
+numpy==1.26.4
+pyyaml==6.0.1
+
+# ── CLIP ─────────────────────────────────────────────────
+# Install via: pip install git+https://github.com/openai/CLIP.git
+# OR use the pip package below (unofficial but easier)
+openai-clip==1.0.1               # unofficial pip wrapper
+ftfy==6.1.3                      # required by CLIP
+regex==2024.5.15                 # required by CLIP
+
+# ── Face Recognition ─────────────────────────────────────
+deepface==0.0.91                 # wraps Facenet, ArcFace, etc.
+# Note: deepface will auto-download model weights on first use
+
+# ── Utils ────────────────────────────────────────────────
+scipy==1.13.0                    # used by deepface
+tqdm==4.66.4
+requests==2.32.3

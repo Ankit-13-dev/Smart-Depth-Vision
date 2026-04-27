@@ -1,16 +1,53 @@
-﻿# models
+﻿# ── Python ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# ── Database ─────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Model weights ────────────────────────────────────────
+models/weights/*.pt
+models/weights/*.pth
+models/weights/*.bin
 *.pt
 *.pth
-*.onnx
+# (Keep best_model.pt tracked if you want — remove lines above selectively)
 
-# datasets
-data/
-datasets/
+# ── Data ─────────────────────────────────────────────────
+data/raw/
+data/processed/
+*.mat
+*.h5
 
-# cache
-__pycache__/
-*.pyc
+# ── Torch Hub cache ──────────────────────────────────────
+hub/
 
-# env
-venv/
+# ── Env & secrets ────────────────────────────────────────
 .env
+.env.*
+*.key
+
+# ── IDE ──────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# ── Logs ─────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Old / removed files ───────────────────────────────────
+# app.py has been REMOVED and replaced by app/main.py
+# Do NOT re-add app.py to this repository.
